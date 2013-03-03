@@ -1,0 +1,36 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+	echo Enter a site name:
+	echo Usage: a2delsite \<site-name.com\>
+	exit
+fi
+
+clear
+echo "###########################################
+Deleting $1 NOW
+Please confirm:";
+OPTIONS="Yes No"
+select opt in $OPTIONS; do
+    if [ "$opt" = "Yes" ]; then
+		clear
+		sudo a2dissite $1;
+		sudo rm /etc/apache2/sites-available/$1
+		echo "###########################################
+		/etc/apache2/sites-available/$1 deleted
+		";
+
+
+
+		sudo rm -Rf /var/www/vhost/$1
+		echo "###########################################
+		/var/www/vhost/$1 folder deleted:
+		";
+     exit
+    elif [ "$opt" = "No" ]; then
+     echo Hello World
+    else
+     clear
+     echo bad option
+    fi
+done

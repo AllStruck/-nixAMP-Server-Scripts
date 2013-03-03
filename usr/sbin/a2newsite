@@ -1,0 +1,137 @@
+#!/bin/bash
+
+# a2newsite - create new Apache virtual host and enable it optionally.
+#		creates the vhost config file under /etc/apache2/site-available
+#		creates the vhost directory structure under /var/www/vhost/[domain-name]
+
+# Copyright (c) 2009 Tero Tasanen [t3r0@t3r0.net] etc.
+
+# - Modified September 12 2011 by AllStruck [a2addsite@allstruck.com]
+# - Modified November 27 2011 by AllStruck [a2addsite@allstruck.com]
+# - Modified December 11 2011 by AllStruck [a2newsite@allstruck.com]
+# - Modified May 21 2012 by AllStruck [a2newsite@allstruck.com]
+# - All future changes here: https://gist.github.com/2765573
+
+
+
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+
+
+
+
+
+ADMIN_EMAIL=apache.admin.SERVERNAME@allstruck.com # Change this
+VHOSTS_ROOT=/var/www/vhost
+APACHE_SITES=/etc/apache2/sites-available/
+
+# There is a large amount of space below here intentionally...
+# You should not need to edit below here in most cases.
+
+
+
+
+
+
+
+
+
+
+
+
+DOMAIN=$1
+
+source /etc/apache2/envvars
+
+
+function usage {
+cat <<- _EOF_
+USAGE: $0 <domain>
+_EOF_
+
+}
+
+function build_directory_structure {
+	mkdir -p $VHOSTS_ROOT/$DOMAIN/public $VHOSTS_ROOT/$DOMAIN/private $VHOSTS_ROOT/$DOMAIN/log $VHOSTS_ROOT/$DOMAIN/backup $VHOSTS_ROOT/$DOMAIN/cgi-bin
+}
+
+function set_permissions {
+	chown -R $APACHE_RUN_USER $VHOSTS_ROOT/$DOMAIN/public
+}
+
+function build_vhost {
+cat <<- _EOF_
+# domain: vhost-template.com
+# public: $VHOSTS_ROOT/$DOMAIN/public
+
+	<VirtualHost *>
+	        ServerAdmin $ADMIN_EMAIL
+	        ServerName $DOMAIN
+	        ServerAlias www.$DOMAIN
+	        ServerSignature Off
+			
+			DirectoryIndex index.php
+	        DocumentRoot $VHOSTS_ROOT/$DOMAIN/public
+	        		
+	        ErrorLog $VHOSTS_ROOT/$DOMAIN/log/error.log
+	        CustomLog $VHOSTS_ROOT/$DOMAIN/log/access.log combined
+	</VirtualHost>
+_EOF_
+}
+
+
+if [ "$DOMAIN" == "" ]
+then
+	usage
+	exit 1
+fi
+
+
+
+if [ -f $APACHE_SITES/$DOMAIN ]
+then
+	echo "SITE EXISTS. Exiting"
+	exit 1
+fi
+
+build_directory_structure
+build_vhost > $APACHE_SITES/$DOMAIN
+set_permissions
+
+
+echo "Created the VirtualHost file for $DOMAIN."
+echo "Do you want to enable the site? (y/N)"
+read -e ENABLE
+
+if [ $ENABLE == "y" ]
+then
+	a2ensite $DOMAIN
+fi
+
+echo "Reload new Apache configuration now? (y/N)"
+read -e RELOAD
+
+if [ $RELOAD == "y" ]
+then
+	/etc/init.d/apache2 reload
+fi
+
+exit 0
